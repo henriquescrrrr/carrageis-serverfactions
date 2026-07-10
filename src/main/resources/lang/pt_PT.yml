@@ -1,0 +1,151 @@
+prefix: "<dark_gray>[<gradient:#4CAF50:#2E7D32>Facções</gradient>]</dark_gray>"
+
+# Criação
+faction-created: "{prefix} <green>Facção <white>{name}</white> [<white>{tag}</white>] criada!</green>"
+faction-created-broadcast: "{prefix} <yellow><white>{player}</white> criou a facção <white>{name}</white> [<white>{tag}</white>]!</yellow>"
+faction-create-cost: "{prefix} <gray>Criar uma facção custa <white>{cost}</white>.</gray>"
+faction-not-enough-money: "{prefix} <red>Precisas de <white>{cost}</white> mas tens <white>{balance}</white>.</red>"
+faction-name-taken: "{prefix} <red>Esse nome de facção já está em uso.</red>"
+faction-tag-taken: "{prefix} <red>Essa tag já está em uso.</red>"
+faction-name-too-long: "{prefix} <red>O nome deve ter entre {min} e {max} caracteres.</red>"
+faction-tag-too-long: "{prefix} <red>A tag deve ter entre 1 e {max} caracteres.</red>"
+faction-name-invalid: "{prefix} <red>O nome contém caracteres inválidos.</red>"
+faction-already-in-faction: "{prefix} <red>Já estás numa facção. Sai primeiro.</red>"
+
+# Dissolução
+faction-dissolved: "{prefix} <red>A facção <white>{name}</white> foi dissolvida.</red>"
+faction-dissolved-member: "{prefix} <red>A tua facção <white>{name}</white> foi dissolvida pelo líder.</red>"
+faction-only-leader-dissolve: "{prefix} <red>Apenas o líder pode dissolver a facção.</red>"
+
+# Entrar/Sair
+faction-joined: "{prefix} <green>Entraste na <white>{name}</white>!</green>"
+faction-joined-broadcast: "{prefix} <yellow><white>{player}</white> entrou na facção!</yellow>"
+faction-left: "{prefix} <gray>Saíste da <white>{name}</white>.</gray>"
+faction-left-broadcast: "{prefix} <yellow><white>{player}</white> saiu da facção.</yellow>"
+faction-leader-cannot-leave: "{prefix} <red>És o líder. Transfere a liderança primeiro ou dissolve a facção.</red>"
+faction-not-in-faction: "{prefix} <red>Não estás numa facção.</red>"
+
+# Convites
+faction-invite-sent: "{prefix} <green>Convidaste <white>{player}</white> para a facção.</green>"
+faction-invite-received: "{prefix} <yellow><white>{player}</white> convidou-te para <white>{faction}</white>! <click:run_command:/fac invites><gold>[Ver Convites]</gold></click></yellow>"
+faction-invite-accepted: "{prefix} <green>Aceitaste o convite para <white>{faction}</white>.</green>"
+faction-invite-declined: "{prefix} <gray>Recusaste o convite de <white>{faction}</white>.</gray>"
+faction-invite-expired: "{prefix} <gray>O convite de <white>{faction}</white> expirou.</gray>"
+faction-invite-already-sent: "{prefix} <red>Esse jogador já tem um convite pendente.</red>"
+faction-invite-self: "{prefix} <red>Não podes convidar-te a ti próprio.</red>"
+faction-target-in-faction: "{prefix} <red><white>{player}</white> já está numa facção.</red>"
+faction-full: "{prefix} <red>A facção está cheia ({count}/{max}).</red>"
+faction-no-permission-invite: "{prefix} <red>O teu cargo não tem permissão para convidar.</red>"
+faction-faction-private: "{prefix} <red>Esta facção é privada. Precisas de um convite.</red>"
+faction-joined-public: "{prefix} <green>Entraste na <white>{name}</white>!</green>"
+
+# Expulsão
+faction-kicked: "{prefix} <red>Foste expulso da <white>{faction}</white> por <white>{player}</white>.</red>"
+faction-kicked-confirm: "{prefix} <green>Expulsaste <white>{target}</white> da facção.</green>"
+faction-kick-broadcast: "{prefix} <yellow><white>{target}</white> foi expulso da facção.</yellow>"
+faction-no-permission-kick: "{prefix} <red>O teu cargo não tem permissão para expulsar.</red>"
+faction-cant-kick-higher: "{prefix} <red>Não podes expulsar alguém com cargo igual ou superior.</red>"
+faction-cant-kick-self: "{prefix} <red>Não podes expulsar-te a ti próprio.</red>"
+
+# Cargos
+faction-role-created: "{prefix} <green>Cargo <white>{role}</white> criado.</green>"
+faction-role-deleted: "{prefix} <green>Cargo <white>{role}</white> eliminado.</green>"
+faction-role-assigned: "{prefix} <green><white>{player}</white> é agora <white>{role}</white>.</green>"
+faction-role-assigned-target: "{prefix} <yellow>Agora és <white>{role}</white> em <white>{faction}</white>.</yellow>"
+faction-no-permission-roles: "{prefix} <red>O teu cargo não tem permissão para gerir cargos.</red>"
+faction-cant-assign-higher: "{prefix} <red>Não podes atribuir um cargo igual ou superior ao teu.</red>"
+faction-cant-edit-leader-role: "{prefix} <red>O cargo de Líder não pode ser editado ou eliminado.</red>"
+faction-role-in-use: "{prefix} <red>Não é possível eliminar — {count} membros têm este cargo. Reatribui-os primeiro.</red>"
+faction-max-roles: "{prefix} <red>Número máximo de cargos atingido.</red>"
+
+# Definições
+faction-settings-saved: "{prefix} <green>Definições guardadas.</green>"
+faction-no-permission-settings: "{prefix} <red>O teu cargo não tem permissão para alterar definições.</red>"
+faction-visibility-public: "{prefix} <green>A facção é agora <white>PÚBLICA</white>. Qualquer um pode entrar.</green>"
+faction-visibility-private: "{prefix} <green>A facção é agora <white>PRIVADA</white>. Apenas por convite.</green>"
+faction-name-changed: "{prefix} <green>Nome da facção alterado para <white>{name}</white>.</green>"
+faction-tag-changed: "{prefix} <green>Tag alterada para <white>{tag}</white>.</green>"
+faction-color-changed: "{prefix} <green>Cor atualizada.</green>"
+faction-member-limit-changed: "{prefix} <green>Limite de membros definido para <white>{limit}</white>.</green>"
+faction-member-limit-disabled: "{prefix} <green>Limite de membros desativado (ilimitado).</green>"
+faction-member-limit-enabled: "{prefix} <green>Limite de membros ativado: <white>{limit}</white>.</green>"
+
+# Liderança
+faction-leadership-transferred: "{prefix} <green>Liderança transferida para <white>{player}</white>.</green>"
+faction-leadership-received: "{prefix} <gold>Agora és o líder de <white>{faction}</white>!</gold>"
+
+# Chat
+faction-chat-enabled: "{prefix} <green>Chat da facção <white>LIGADO</white>. As mensagens vão apenas para a facção.</green>"
+faction-chat-disabled: "{prefix} <gray>Chat da facção <white>DESLIGADO</white>. As mensagens são públicas.</gray>"
+faction-chat-format: "<dark_green>[Fac] {color}{player}<dark_green>: <green>{message}</green>"
+
+# Info
+faction-info-header: "{prefix} <yellow>--- {name} [{tag}] ---</yellow>"
+faction-info-leader: "<gray>Líder: <white>{leader}</white></gray>"
+faction-info-members: "<gray>Membros: <white>{count}/{max}</white></gray>"
+faction-info-visibility: "<gray>Visibilidade: <white>{visibility}</white></gray>"
+faction-info-created: "<gray>Criada em: <white>{date}</white></gray>"
+
+# Títulos GUI
+gui-main-menu: "<dark_gray>☰ Menu da Facção"
+gui-create-faction: "<dark_gray>Criar Facção"
+gui-settings: "<dark_gray>⚙ Definições da Facção"
+gui-members: "<dark_gray>Membros"
+gui-roles: "<dark_gray>Cargos"
+gui-role-editor: "<dark_gray>Editar Cargo: {role}"
+gui-role-create: "<dark_gray>Criar Cargo"
+gui-invites: "<dark_gray>Convites Pendentes"
+gui-invite-player: "<dark_gray>Convidar Jogador"
+gui-confirm-kick: "<dark_gray>Confirmar Expulsão"
+gui-confirm-dissolve: "<dark_gray>Dissolver Facção?"
+gui-confirm-leave: "<dark_gray>Sair da Facção?"
+gui-public-factions: "<dark_gray>Facções Públicas"
+gui-color-picker: "<dark_gray>Escolher Cor"
+gui-member-limit: "<dark_gray>Definir Limite de Membros"
+gui-transfer-leadership: "<dark_gray>Transferir Liderança"
+gui-select-role: "<dark_gray>Selecionar Cargo para {player}"
+gui-faction-info: "<dark_gray>ℹ {name}"
+
+# Botões GUI
+gui-btn-create: "<green>Criar Facção"
+gui-btn-settings: "<yellow>⚙ Definições"
+gui-btn-members: "<yellow>Membros ({count})"
+gui-btn-roles: "<yellow>Cargos"
+gui-btn-invites: "<yellow>Convites ({count})"
+gui-btn-chat-toggle: "<yellow>Chat da Facção: {status}"
+gui-btn-leave: "<red>Sair da Facção"
+gui-btn-dissolve: "<red>Dissolver Facção"
+gui-btn-info: "<gray>ℹ Info da Facção"
+gui-btn-public-factions: "<yellow>Explorar Facções Públicas"
+gui-btn-join-public: "<green>Entrar em {name}"
+gui-btn-close: "<red>Fechar"
+gui-btn-back: "<gray>← Voltar"
+gui-btn-confirm: "<green>Confirmar"
+gui-btn-cancel: "<red>Cancelar"
+gui-btn-next-page: "<yellow>Seguinte →"
+gui-btn-prev-page: "<yellow>← Anterior"
+gui-btn-toggle-on: "<green>Ativado"
+gui-btn-toggle-off: "<red>Desativado"
+gui-btn-visibility-public: "<green>Pública — qualquer um pode entrar"
+gui-btn-visibility-private: "<red>Privada — apenas por convite"
+gui-btn-name: "<yellow>Nome da Facção: <white>{name}"
+gui-btn-tag: "<yellow>Tag: <white>{tag}"
+gui-btn-primary-color: "<yellow>Cor Primária"
+gui-btn-secondary-color: "<yellow>Cor Secundária"
+gui-btn-member-limit-toggle: "<yellow>Limite de Membros: {status}"
+gui-btn-member-limit-amount: "<yellow>Máx. Membros: <white>{amount}"
+gui-btn-transfer-leadership: "<gold>Transferir Liderança"
+gui-btn-create-role: "<green>+ Criar Cargo"
+gui-btn-delete-role: "<red>Eliminar Cargo"
+gui-btn-role-priority: "<yellow>Prioridade: <white>{priority}"
+gui-btn-edit-name: "<yellow>Clica para renomear"
+
+# Textos de tabuleta
+sign-faction-name: "Nome da Facção:"
+sign-faction-tag: "Tag (máx. {max}):"
+sign-role-name: "Nome do Cargo:"
+
+# Admin
+admin-reload: "{prefix} <green>Configuração recarregada.</green>"
+admin-disband: "{prefix} <green>Facção <white>{faction}</white> dissolvida à força.</green>"
+

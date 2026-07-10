@@ -1,0 +1,268 @@
+﻿language: pt_PT
+debug: false
+economy:
+  mode: auto
+  priority: ["MultiBank", "Vault"]
+faction:
+  # Cost to create a faction
+  creation-cost: 100.0
+  # Max tag length
+  max-tag-length: 4
+  # Max faction name length
+  max-name-length: 24
+  # Min faction name length
+  min-name-length: 3
+  # Invite expiry time in hours
+  invite-expiry-hours: 24
+  # Default member limit (0 = unlimited)
+  default-member-limit: 0
+  # Default member limit toggle (false = unlimited by default)
+  default-member-limit-enabled: false
+  # Max member limit that can be set
+  absolute-max-members: 50
+  # Default visibility for new factions
+  default-public: false
+  # Friendly fire always enabled
+  friendly-fire: true
+# Default roles created for new factions
+default-roles:
+  - name: "Officer"
+    priority: 1
+    can-invite: true
+    can-kick: true
+    can-edit-settings: false
+    can-manage-roles: false
+    can-promote: true
+    can-demote: true
+    can-access-bank: true
+  - name: "Member"
+    priority: 2
+    can-invite: true
+    can-kick: false
+    can-edit-settings: false
+    can-manage-roles: false
+    can-promote: false
+    can-demote: false
+    can-access-bank: false
+  - name: "Recruit"
+    priority: 3
+    can-invite: false
+    can-kick: false
+    can-edit-settings: false
+    can-manage-roles: false
+    can-promote: false
+    can-demote: false
+    can-access-bank: false
+multibank:
+  # Auto-create faction bank account
+  auto-create-bank: true
+  # Bank account name prefix
+  bank-name-prefix: "Faction: "
+sounds:
+  faction-created: "minecraft:entity.experience_orb.pickup"
+  member-joined: "minecraft:entity.player.levelup"
+  member-left: "minecraft:entity.villager.no"
+  member-kicked: "minecraft:entity.iron_golem.hurt"
+  faction-dissolved: "minecraft:entity.wither.death"
+  invite-received: "minecraft:entity.experience_orb.pickup"
+  role-changed: "minecraft:block.anvil.use"
+  settings-saved: "minecraft:ui.button.click"
+
+# ==========================================================================
+# GUI Layout Configuration
+# Adjust inventory sizes and slot positions for every GUI.
+# Sizes must be multiples of 9 (9, 18, 27, 36, 45, 54).
+# ==========================================================================
+gui:
+  main-menu-no-faction:
+    size: 9
+    slots:
+      create: 1
+      browse-public: 3
+      invites: 5
+      close: 7
+
+  main-menu-faction:
+    size: 27
+    slots:
+      faction-info: 0
+      members: 2
+      chat-toggle: 4
+      browse-public: 6
+      invites: 8
+      roles: 9
+      settings: 11
+      leave: 18
+      close: 22
+      dissolve: 26
+
+  settings:
+    size: 18
+    slots:
+      name: 0
+      tag: 2
+      primary-color: 4
+      secondary-color: 6
+      visibility: 8
+      member-limit: 9
+      transfer-leadership: 11
+      back: 13
+      close: 17
+
+  role-editor:
+    size: 18
+    slots:
+      role-name: 0
+      priority-down: 2
+      priority-display: 3
+      priority-up: 4
+      delete: 8
+      perm-invite: 9
+      perm-kick: 10
+      perm-settings: 11
+      perm-roles: 12
+      perm-promote: 13
+      perm-demote: 14
+      perm-bank: 15
+      back: 16
+      save: 17
+
+  members:
+    size: 54
+    items-per-page: 45
+    slots:
+      prev-page: 45
+      next-page: 53
+      back: 48
+      close: 49
+
+  roles:
+    size: 54
+    items-per-page: 45
+    slots:
+      create-role: 46
+      prev-page: 45
+      next-page: 53
+      back: 48
+      close: 49
+
+  member-action:
+    size: 9
+    slots:
+      member-head: 0
+      change-role: 2
+      promote: 3
+      demote: 4
+      kick: 6
+      back: 8
+
+  visibility-select:
+    size: 9
+    slots:
+      public: 2
+      private: 6
+
+  confirm-action:
+    size: 9
+    slots:
+      cancel-1: 0
+      cancel-2: 1
+      cancel-3: 2
+      preview: 4
+      confirm-1: 6
+      confirm-2: 7
+      confirm-3: 8
+
+  create-confirm:
+    size: 9
+    slots:
+      preview: 1
+      confirm: 4
+      cancel: 6
+
+  member-limit:
+    size: 27
+    slots:
+      current-display: 4
+      dec-10: 10
+      dec-5: 11
+      dec-1: 12
+      inc-1: 14
+      inc-5: 15
+      inc-10: 16
+      save: 22
+      back: 18
+      close: 26
+
+  color-picker:
+    size: 27
+    # Colors fill rows 0-1 (slots 0-15), preview at 22, back at 18, close at 26
+    slots:
+      preview: 22
+      back: 18
+      close: 26
+
+  invite-player:
+    size: 54
+    items-per-page: 45
+    slots:
+      prev-page: 45
+      next-page: 53
+      back: 48
+      close: 49
+
+  invites:
+    size: 54
+    items-per-page: 45
+    slots:
+      prev-page: 45
+      next-page: 53
+      back: 48
+      close: 49
+
+  public-factions:
+    size: 54
+    items-per-page: 45
+    slots:
+      prev-page: 45
+      next-page: 53
+      back: 48
+      close: 49
+
+  public-faction-detail:
+    size: 18
+    slots:
+      faction-banner: 0
+      leader-head: 2
+      members-info: 4
+      visibility: 6
+      join-button: 13
+      back: 9
+      close: 17
+
+  select-role:
+    size: 54
+    items-per-page: 45
+    slots:
+      back: 48
+      close: 49
+
+  transfer-leadership:
+    size: 54
+    items-per-page: 45
+    slots:
+      prev-page: 45
+      next-page: 53
+      back: 48
+      close: 49
+
+  faction-info:
+    size: 18
+    slots:
+      faction-banner: 0
+      leader-head: 2
+      members-count: 4
+      created-date: 6
+      visibility: 8
+      back: 13
+      close: 17

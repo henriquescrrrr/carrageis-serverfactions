@@ -1,0 +1,24 @@
+﻿name: ServerFactions
+version: '${version}'
+main: pt.henrique.serverfactions.ServerFactions
+api-version: "1.21"
+description: Faction system with custom roles, GUI management, and developer API.
+author: Henrique
+dependencies:
+  server:
+    MultiBank:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Vault:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    PlayerSettings:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+      join-classpath: true
