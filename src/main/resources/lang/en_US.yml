@@ -135,6 +135,7 @@ gui-btn-secondary-color: "<yellow>Secondary Color"
 gui-btn-member-limit-toggle: "<yellow>Member Limit: {status}"
 gui-btn-member-limit-amount: "<yellow>Max Members: <white>{amount}"
 gui-btn-transfer-leadership: "<gold>Transfer Leadership"
+gui-btn-invite-player: "<green>Invite Player"
 gui-btn-create-role: "<green>+ Create Role"
 gui-btn-delete-role: "<red>Delete Role"
 gui-btn-role-priority: "<yellow>Priority: <white>{priority}"
@@ -144,6 +145,15 @@ gui-btn-edit-name: "<yellow>Click to rename"
 sign-faction-name: "Faction Name:"
 sign-faction-tag: "Tag (max {max}):"
 sign-role-name: "Role Name:"
+
+# Lookups / command feedback
+faction-not-found: "{prefix} <red>Faction <white>{faction}</white> not found.</red>"
+faction-player-not-found: "{prefix} <red>Player <white>{player}</white> is not online.</red>"
+command-players-only: "{prefix} <red>Only players can use this command.</red>"
+command-no-permission: "{prefix} <red>You don't have permission to do that.</red>"
+
+# Join notifications
+faction-invites-notify: "{prefix} <yellow>You have <white>{count}</white> pending faction invite(s)! <click:run_command:/fac invites><gold>[View Invites]</gold></click></yellow>"
 
 # Admin
 admin-reload: "{prefix} <green>Configuration reloaded.</green>"

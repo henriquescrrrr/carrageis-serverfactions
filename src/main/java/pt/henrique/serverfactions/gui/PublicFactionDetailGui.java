@@ -79,10 +79,14 @@ public final class PublicFactionDetailGui {
             gui.setItem(gc.getSlot(GUI, "join-button"), create(Material.LIME_WOOL,
                     lang.getRaw("gui-btn-join-public", player).replace("{name}", faction.getName())), p -> {
                 p.closeInventory();
-                fm.joinFaction(p.getUniqueId(), factionId);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (p.isOnline()) MainMenuGui.open(p);
-                }, 2L);
+                // joinFaction re-checks visibility/limit live and messages the
+                // player on refusal; only reopen the menu when the join succeeded.
+                boolean joined = fm.joinFaction(p.getUniqueId(), factionId);
+                if (joined) {
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (p.isOnline()) MainMenuGui.open(p);
+                    }, 2L);
+                }
             });
         }
 

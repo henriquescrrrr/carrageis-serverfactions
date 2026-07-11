@@ -157,6 +157,19 @@ public final class MainMenuGui {
                     "<red>Your role doesn't have this permission."));
         }
 
+        // Invite Player — grayed out if no canInvite permission
+        boolean canInvite = isLeader || (playerRole != null && playerRole.isCanInvite());
+        if (canInvite) {
+            gui.setItem(gc.getSlot("main-menu-faction", "invite-player"), create(Material.OAK_SIGN,
+                    lang.getRaw("gui-btn-invite-player", player)), p -> {
+                InvitePlayerGui.open(p);
+            });
+        } else {
+            gui.setItem(gc.getSlot("main-menu-faction", "invite-player"), locked(
+                    lang.getRaw("gui-btn-invite-player", player),
+                    "<red>Your role doesn't have this permission."));
+        }
+
         // Leave Faction
         gui.setItem(gc.getSlot("main-menu-faction", "leave"), create(Material.RED_BED,
                 lang.getRaw("gui-btn-leave", player)), p -> {
@@ -223,6 +236,11 @@ public final class MainMenuGui {
                 if (tag.length() > maxTag) {
                     player.sendMessage(lang.get("faction-tag-too-long", player,
                             Map.of("max", String.valueOf(maxTag))));
+                    return;
+                }
+                if (!tag.matches("[a-zA-Z0-9_-]+")) {
+                    // Early feedback; createFaction re-validates as the authoritative gate.
+                    player.sendMessage(lang.get("faction-name-invalid", player));
                     return;
                 }
                 if (fm.isTagTaken(tag)) {

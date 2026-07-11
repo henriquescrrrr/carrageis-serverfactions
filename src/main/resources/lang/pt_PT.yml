@@ -135,6 +135,7 @@ gui-btn-secondary-color: "<yellow>Cor Secundária"
 gui-btn-member-limit-toggle: "<yellow>Limite de Membros: {status}"
 gui-btn-member-limit-amount: "<yellow>Máx. Membros: <white>{amount}"
 gui-btn-transfer-leadership: "<gold>Transferir Liderança"
+gui-btn-invite-player: "<green>Convidar Jogador"
 gui-btn-create-role: "<green>+ Criar Cargo"
 gui-btn-delete-role: "<red>Eliminar Cargo"
 gui-btn-role-priority: "<yellow>Prioridade: <white>{priority}"
@@ -144,6 +145,15 @@ gui-btn-edit-name: "<yellow>Clica para renomear"
 sign-faction-name: "Nome da Facção:"
 sign-faction-tag: "Tag (máx. {max}):"
 sign-role-name: "Nome do Cargo:"
+
+# Pesquisas / feedback de comandos
+faction-not-found: "{prefix} <red>Facção <white>{faction}</white> não encontrada.</red>"
+faction-player-not-found: "{prefix} <red>O jogador <white>{player}</white> não está online.</red>"
+command-players-only: "{prefix} <red>Apenas jogadores podem usar este comando.</red>"
+command-no-permission: "{prefix} <red>Não tens permissão para fazer isso.</red>"
+
+# Notificações ao entrar
+faction-invites-notify: "{prefix} <yellow>Tens <white>{count}</white> convite(s) de facção pendente(s)! <click:run_command:/fac invites><gold>[Ver Convites]</gold></click></yellow>"
 
 # Admin
 admin-reload: "{prefix} <green>Configuração recarregada.</green>"

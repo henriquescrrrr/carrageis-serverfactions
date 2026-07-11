@@ -23,12 +23,12 @@ A modern faction system for **Paper 1.21+** with custom roles, GUI-driven manage
 
 | Dependency | Required | Purpose |
 |---|---|---|
-| Paper 1.21+ | ✅ | Server platform |
-| Java 21+ | ✅ | Runtime |
-| MultiBank | ❌ | Primary economy + faction bank accounts |
-| Vault | ❌ | Fallback economy |
-| PlayerSettings | ❌ | Per-player language |
-| PlaceholderAPI | ❌ | Placeholders |
+| Paper 1.21+ | | Server platform |
+| Java 21+ | | Runtime |
+| MultiBank | | Primary economy + faction bank accounts |
+| Vault | | Fallback economy |
+| PlayerSettings | | Per-player language |
+| PlaceholderAPI | | Placeholders |
 
 ## Commands
 

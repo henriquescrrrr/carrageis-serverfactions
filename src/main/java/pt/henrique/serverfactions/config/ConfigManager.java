@@ -30,6 +30,7 @@ public class ConfigManager {
     private int defaultMemberLimit;
     private boolean defaultMemberLimitEnabled;
     private int absoluteMaxMembers;
+    private int maxRoles;
     private boolean defaultPublic;
     private boolean friendlyFire;
 
@@ -69,6 +70,7 @@ public class ConfigManager {
         defaultMemberLimit = config.getInt("faction.default-member-limit", 0);
         defaultMemberLimitEnabled = config.getBoolean("faction.default-member-limit-enabled", false);
         absoluteMaxMembers = config.getInt("faction.absolute-max-members", 50);
+        maxRoles = config.getInt("faction.max-roles", 15);
         defaultPublic = config.getBoolean("faction.default-public", false);
         friendlyFire = config.getBoolean("faction.friendly-fire", true);
 
@@ -155,6 +157,10 @@ public class ConfigManager {
 
     public int getAbsoluteMaxMembers() {
         return absoluteMaxMembers;
+    }
+
+    public int getMaxRoles() {
+        return maxRoles;
     }
 
     public boolean isDefaultPublic() {

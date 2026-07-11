@@ -33,8 +33,13 @@ public class LangManager {
         locales.clear();
 
         // 1. Save default lang files from JAR if they don't exist on disk
+        // (guarded with exists() — saveResource(…, false) on an existing file
+        // logs an "already exists" warning on every boot/reload)
         for (String loc : new String[]{"en_US", "pt_PT", "fr_FR"}) {
-            plugin.saveResource("lang/" + loc + ".yml", false);
+            File langFile = new File(plugin.getDataFolder(), "lang/" + loc + ".yml");
+            if (!langFile.exists()) {
+                plugin.saveResource("lang/" + loc + ".yml", false);
+            }
         }
 
         // 2. Load ALL .yml files from the lang/ folder on disk

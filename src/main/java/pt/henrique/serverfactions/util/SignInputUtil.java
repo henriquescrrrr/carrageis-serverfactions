@@ -86,10 +86,12 @@ public final class SignInputUtil {
 
         // Safety timeout: restore after 60 seconds if no response
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            PendingInput p = pending.remove(uuid);
-            if (p != null) {
-                restoreBlock(p);
-                Bukkit.getScheduler().runTask(plugin, () -> p.callback.accept(""));
+            // Remove ONLY if the map still holds THIS request — a plain remove(uuid)
+            // here would cancel a NEWER pending input for the same player (e.g. the
+            // tag prompt that follows the name prompt in the creation flow).
+            if (pending.remove(uuid, input)) {
+                restoreBlock(input);
+                input.callback.accept("");
             }
         }, 1200L);
     }

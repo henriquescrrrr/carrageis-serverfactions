@@ -40,6 +40,16 @@ public final class RolesGui {
         Faction faction = fm.getFactionByPlayer(player.getUniqueId());
         if (faction == null) return;
 
+        // Server-side gate (mirrors the MainMenu button gating): a player whose
+        // permission was revoked while a stale GUI was open must not re-enter.
+        FactionRole viewerRole = fm.getPlayerRole(player.getUniqueId());
+        boolean canManage = faction.getLeaderUuid().equals(player.getUniqueId())
+                || (viewerRole != null && viewerRole.isCanManageRoles());
+        if (!canManage) {
+            player.sendMessage(lang.get("faction-no-permission-roles", player));
+            return;
+        }
+
         String factionId = faction.getFactionId();
         int pageSize = gc.getItemsPerPage(GUI);
 
@@ -64,7 +74,9 @@ public final class RolesGui {
 
             if (role.isLeaderRole()) {
                 withGlow(item);
-                gui.setItem(i, item); // no click handler for leader role
+                // Leader role is not editable — explain instead of dead-ending silently.
+                gui.setItem(i, item, p ->
+                        p.sendMessage(lang.get("faction-cant-edit-leader-role", p)));
             } else if (fm.canManageRole(player.getUniqueId(), role.getRoleId())) {
                 gui.setItem(i, item, p -> {
                     RoleEditorGui.open(p, role.getRoleId());
@@ -91,17 +103,16 @@ public final class RolesGui {
                 int maxPriority = roles.stream()
                         .mapToInt(FactionRole::getPriority).max().orElse(0);
                 Map<String, Boolean> perms = new HashMap<>();
-                fm.createRole(p.getUniqueId(), factionId, roleName, maxPriority + 1, perms);
-                p.sendMessage(lang.get("faction-role-created", p, Map.of("role", roleName)));
-                List<FactionRole> updatedRoles = fm.getFactionRoles(factionId);
-                FactionRole newRole = updatedRoles.stream()
-                        .filter(r -> r.getName().equals(roleName))
-                        .findFirst().orElse(null);
-                if (newRole != null) {
-                    RoleEditorGui.open(p, newRole.getRoleId());
-                } else {
+                // createRole validates the name charset, the role cap and the actor's
+                // permission, and messages the player when it refuses (returns null).
+                FactionRole created = fm.createRole(p.getUniqueId(), factionId, roleName,
+                        maxPriority + 1, perms);
+                if (created == null) {
                     RolesGui.open(p);
+                    return;
                 }
+                p.sendMessage(lang.get("faction-role-created", p, Map.of("role", roleName)));
+                RoleEditorGui.open(p, created.getRoleId());
             });
         });
 

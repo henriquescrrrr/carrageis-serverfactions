@@ -168,7 +168,15 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
                         }
                         // Re-validate after async gap
                         if (playerFaction.containsKey(leaderUuid) || isNameTaken(name) || isTagTaken(tag)) {
-                            // Edge case: refund via deposit would be ideal, but skip for simplicity
+                            // The cost was already withdrawn but the faction can no longer
+                            // be created (name/tag raced away or the player joined another
+                            // faction meanwhile) — refund it instead of destroying money.
+                            economy.deposit(leaderUuid, cost).thenAccept(refunded -> {
+                                if (!refunded) {
+                                    plugin.getLogger().warning("Could not refund faction creation cost ("
+                                            + cost + ") to " + leaderUuid);
+                                }
+                            });
                             leader.sendMessage(lang.get("faction-name-taken", leader));
                             return;
                         }
@@ -261,11 +269,22 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
     }
 
     /**
-     * Dissolve a faction. Only leader or admin can do this.
+     * Dissolve a faction. Only the leader or a {@code serverfactions.admin} may do this;
+     * {@code dissolvedBy == null} means console/system (always allowed).
      */
     public void dissolveFaction(String factionId, UUID dissolvedBy) {
         Faction faction = factionsById.get(factionId);
         if (faction == null) return;
+
+        // Server-side authorization (defence in depth on top of the GUI gating):
+        // a stale GUI or crafted call must not let a non-leader dissolve the faction.
+        if (dissolvedBy != null && !faction.getLeaderUuid().equals(dissolvedBy)) {
+            Player actor = Bukkit.getPlayer(dissolvedBy);
+            if (actor == null || !actor.hasPermission("serverfactions.admin")) {
+                if (actor != null) actor.sendMessage(lang.get("faction-only-leader-dissolve", actor));
+                return;
+            }
+        }
 
         // Fire disband event
         Bukkit.getPluginManager().callEvent(new FactionDisbandEvent(factionId, dissolvedBy));
@@ -317,9 +336,23 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
     //  MEMBERS
     // ================================================================
 
-    public void joinFaction(UUID playerUuid, String factionId) {
+    /**
+     * Join a faction. The faction must be public, or the player must hold a pending
+     * (non-expired) invite — re-checked here server-side so a stale "Join" button on a
+     * faction that just went private cannot bypass the invite requirement.
+     *
+     * @return true if the player actually joined
+     */
+    public boolean joinFaction(UUID playerUuid, String factionId) {
         Faction faction = factionsById.get(factionId);
-        if (faction == null || playerFaction.containsKey(playerUuid)) return;
+        if (faction == null || playerFaction.containsKey(playerUuid)) return false;
+
+        // Private factions require an invite
+        if (!faction.isPublic() && !hasInvite(playerUuid, factionId)) {
+            Player p = Bukkit.getPlayer(playerUuid);
+            if (p != null) p.sendMessage(lang.get("faction-faction-private", p));
+            return false;
+        }
 
         // Check member limit
         if (faction.isMemberLimitEnabled() && faction.getMemberLimit() > 0) {
@@ -330,13 +363,13 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
                     p.sendMessage(lang.get("faction-full", p, Map.of(
                             "count", String.valueOf(count), "max", String.valueOf(faction.getMemberLimit()))));
                 }
-                return;
+                return false;
             }
         }
 
         // Get the lowest-rank default role (highest priority number)
         FactionRole defaultRole = getLowestRole(factionId);
-        if (defaultRole == null) return;
+        if (defaultRole == null) return false;
 
         long now = System.currentTimeMillis();
         FactionMember member = new FactionMember(playerUuid, factionId, defaultRole.getRoleId(), now);
@@ -367,6 +400,7 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
         }
         broadcastToFaction(factionId, "faction-joined-broadcast",
                 Map.of("player", getPlayerName(playerUuid)), playerUuid);
+        return true;
     }
 
     public void leaveFaction(UUID playerUuid) {
@@ -535,17 +569,27 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
     }
 
     public void acceptInvite(UUID playerUuid, String factionId) {
-        if (!hasInvite(playerUuid, factionId)) return;
-        if (playerFaction.containsKey(playerUuid)) {
-            Player p = Bukkit.getPlayer(playerUuid);
-            if (p != null) p.sendMessage(lang.get("faction-already-in-faction", p));
-            return;
-        }
-        removeInvite(playerUuid, factionId);
-        joinFaction(playerUuid, factionId);
-
         Player player = Bukkit.getPlayer(playerUuid);
         Faction faction = factionsById.get(factionId);
+        if (!hasInvite(playerUuid, factionId)) {
+            // Invite expired (or was withdrawn) between the GUI opening and the click.
+            if (player != null && faction != null) {
+                player.sendMessage(lang.get("faction-invite-expired", player,
+                        Map.of("faction", faction.getName())));
+            }
+            removeInvite(playerUuid, factionId); // clean up an expired leftover, if any
+            return;
+        }
+        if (playerFaction.containsKey(playerUuid)) {
+            if (player != null) player.sendMessage(lang.get("faction-already-in-faction", player));
+            return;
+        }
+
+        // Join first; only report success (and consume the invite) if it worked.
+        // joinFaction removes the pending invite itself on success; on failure
+        // (e.g. faction full) the invite is kept so the player can retry later.
+        if (!joinFaction(playerUuid, factionId)) return;
+
         if (player != null && faction != null) {
             player.sendMessage(lang.get("faction-invite-accepted", player,
                     Map.of("faction", faction.getName())));
@@ -714,8 +758,27 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
         return priority;
     }
 
-    public void createRole(UUID actorUuid, String factionId, String name, int priority, Map<String, Boolean> permissions) {
-        if (!canManageRole(actorUuid, factionId, null)) return;
+    /**
+     * Create a new role. Validates the actor, the role name charset/length
+     * (role names are rendered through MiniMessage in GUIs and chat messages,
+     * so an unvalidated name would be a formatting/click injection vector)
+     * and the per-faction role cap.
+     *
+     * @return the created role, or null if creation was refused (the actor is messaged)
+     */
+    public FactionRole createRole(UUID actorUuid, String factionId, String name, int priority, Map<String, Boolean> permissions) {
+        if (!canManageRole(actorUuid, factionId, null)) {
+            messagePlayer(actorUuid, "faction-no-permission-roles", null);
+            return null;
+        }
+        if (!isValidRoleName(name)) {
+            messagePlayer(actorUuid, "faction-name-invalid", null);
+            return null;
+        }
+        if (getFactionRoles(factionId).size() >= config.getMaxRoles()) {
+            messagePlayer(actorUuid, "faction-max-roles", null);
+            return null;
+        }
         int safePriority = sanitizeRolePermissions(actorUuid, priority, permissions);
         String roleId = UUID.randomUUID().toString();
         FactionRole role = new FactionRole(roleId, factionId, name,
@@ -730,12 +793,25 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
 
         factionRoles.computeIfAbsent(factionId, k -> new ArrayList<>()).add(role);
         database.saveRole(role);
+        return role;
     }
 
-    public void editRole(UUID actorUuid, String roleId, String name, int priority, Map<String, Boolean> permissions) {
+    /**
+     * Edit a role. Same validation rules as {@link #createRole}.
+     *
+     * @return true if the role was saved (the actor is messaged on refusal)
+     */
+    public boolean editRole(UUID actorUuid, String roleId, String name, int priority, Map<String, Boolean> permissions) {
         FactionRole role = findRoleById(roleId);
-        if (role == null || role.isLeaderRole()) return;
-        if (!canManageRole(actorUuid, role.getFactionId(), role)) return;
+        if (role == null || role.isLeaderRole()) return false;
+        if (!canManageRole(actorUuid, role.getFactionId(), role)) {
+            messagePlayer(actorUuid, "faction-no-permission-roles", null);
+            return false;
+        }
+        if (!isValidRoleName(name)) {
+            messagePlayer(actorUuid, "faction-name-invalid", null);
+            return false;
+        }
 
         int safePriority = sanitizeRolePermissions(actorUuid, priority, permissions);
         role.setName(name);
@@ -749,16 +825,32 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
         if (permissions.containsKey("canAccessBank")) role.setCanAccessBank(permissions.get("canAccessBank"));
 
         database.saveRole(role);
+        return true;
     }
 
-    public void deleteRole(UUID actorUuid, String roleId) {
+    /**
+     * Delete a role. Refused while members still hold it — otherwise those members
+     * would keep a dangling roleId and silently lose their role/permissions.
+     *
+     * @return true if the role was deleted (the actor is messaged on refusal)
+     */
+    public boolean deleteRole(UUID actorUuid, String roleId) {
         FactionRole role = findRoleById(roleId);
-        if (role == null || role.isLeaderRole()) return;
-        if (!canManageRole(actorUuid, role.getFactionId(), role)) return;
+        if (role == null || role.isLeaderRole()) return false;
+        if (!canManageRole(actorUuid, role.getFactionId(), role)) {
+            messagePlayer(actorUuid, "faction-no-permission-roles", null);
+            return false;
+        }
+        int inUse = getRoleMemberCount(roleId);
+        if (inUse > 0) {
+            messagePlayer(actorUuid, "faction-role-in-use", Map.of("count", String.valueOf(inUse)));
+            return false;
+        }
 
         List<FactionRole> roles = factionRoles.get(role.getFactionId());
         if (roles != null) roles.removeIf(r -> r.getRoleId().equals(roleId));
         database.deleteRole(roleId);
+        return true;
     }
 
     /** Server-side check used by the GUI to decide whether a role may be opened for editing. */
@@ -772,6 +864,26 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
         FactionRole assignerRole = getPlayerRole(assignerUuid);
         FactionRole targetRole = findRoleById(roleId);
         if (assignerRole == null || targetRole == null) return;
+
+        // Assigner and target must be in the SAME faction, and the role must belong
+        // to that faction. Without this, a stale GUI (target switched factions while
+        // the menu was open) could graft a role from another faction onto the member.
+        String assignerFaction = playerFaction.get(assignerUuid);
+        if (assignerFaction == null
+                || !assignerFaction.equals(playerFaction.get(targetUuid))
+                || !assignerFaction.equals(targetRole.getFactionId())) {
+            return;
+        }
+
+        // Server-side permission re-check (the GUI gates on these, but a demoted
+        // player with a stale menu must not keep assigning roles).
+        if (!assignerRole.isLeaderRole()
+                && !assignerRole.isCanPromote()
+                && !assignerRole.isCanDemote()
+                && !assignerRole.isCanManageRoles()) {
+            messagePlayer(assignerUuid, "faction-no-permission-roles", null);
+            return;
+        }
 
         // Can only assign roles with higher priority number (lower rank) than your own
         if (!assignerRole.isLeaderRole() && targetRole.getPriority() <= assignerRole.getPriority()) {
@@ -1073,6 +1185,24 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
         return tag.matches("[a-zA-Z0-9_-]+");
     }
 
+    /**
+     * Role names are embedded (unescaped) into MiniMessage GUI items, titles and
+     * chat messages ({@code faction-role-assigned}), so restrict them to a safe
+     * charset — same policy as faction names — and a sane length.
+     */
+    private boolean isValidRoleName(String name) {
+        return name != null && name.matches("[a-zA-Z0-9 _-]{1,32}");
+    }
+
+    /** Send a lang message to a (possibly offline) player by UUID; no-op when offline. */
+    private void messagePlayer(UUID playerUuid, String langKey, Map<String, String> placeholders) {
+        if (playerUuid == null) return;
+        Player p = Bukkit.getPlayer(playerUuid);
+        if (p != null) {
+            p.sendMessage(placeholders == null ? lang.get(langKey, p) : lang.get(langKey, p, placeholders));
+        }
+    }
+
     private String formatMoney(double amount) {
         return String.format("%.2f", amount);
     }
@@ -1080,7 +1210,10 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
     private String getPlayerName(UUID uuid) {
         Player p = Bukkit.getPlayer(uuid);
         if (p != null) return p.getName();
-        return Bukkit.getOfflinePlayer(uuid).getName();
+        String name = Bukkit.getOfflinePlayer(uuid).getName();
+        // Never return null: the result is used in Map.of(...) placeholder maps,
+        // which throw NullPointerException on null values.
+        return name != null ? name : "?";
     }
 
     private void runSync(Runnable task) {

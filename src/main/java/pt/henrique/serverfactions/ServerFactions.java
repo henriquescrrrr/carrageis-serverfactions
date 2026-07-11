@@ -42,11 +42,9 @@ public final class ServerFactions extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Save default configs
+        // Save default configs (lang files are saved by LangManager.reload(),
+        // saving them twice would log "already exists" warnings on every boot)
         saveDefaultConfig();
-        saveResource("lang/en_US.yml", false);
-        saveResource("lang/pt_PT.yml", false);
-        saveResource("lang/fr_FR.yml", false);
 
         // Init config
         configManager = new ConfigManager(this);

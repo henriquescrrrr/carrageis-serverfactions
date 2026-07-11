@@ -107,6 +107,8 @@ public final class ColorPickerGui {
         } else {
             fm.setSecondaryColor(factionId, colorTag);
         }
+        player.sendMessage(ServerFactions.getInstance().getLangManager()
+                .get("faction-color-changed", player));
         String soundName = ServerFactions.getInstance().getConfigManager().getSound("settings-saved");
         if (soundName != null) {
             try {

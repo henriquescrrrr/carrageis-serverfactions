@@ -20,6 +20,8 @@ faction:
   default-member-limit-enabled: false
   # Max member limit that can be set
   absolute-max-members: 50
+  # Max roles per faction (counts every role, including Leader and the defaults)
+  max-roles: 15
   # Default visibility for new factions
   default-public: false
   # Friendly fire always enabled
@@ -92,6 +94,7 @@ gui:
       invites: 8
       roles: 9
       settings: 11
+      invite-player: 13
       leave: 18
       close: 22
       dissolve: 26

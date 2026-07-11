@@ -4,8 +4,6 @@ import pt.henrique.serverfactions.ServerFactions;
 import pt.henrique.serverfactions.config.LangManager;
 import pt.henrique.serverfactions.manager.FactionManager;
 import pt.henrique.serverfactions.model.FactionInvite;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,6 +11,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Handles player connection events:
@@ -28,17 +27,13 @@ public class PlayerConnectionListener implements Listener {
         FactionManager fm = plugin.getFactionManager();
         LangManager lang = plugin.getLangManager();
 
-        // Notify about pending invites (delayed 1 second so player sees it)
+        // Notify about pending invites (delayed 2 seconds so the player sees it)
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) return;
             List<FactionInvite> invites = fm.getPlayerInvites(player.getUniqueId());
             if (!invites.isEmpty()) {
-                Component msg = MiniMessage.miniMessage().deserialize(
-                        lang.getRaw("prefix", player)
-                                + " <yellow>You have <white>" + invites.size()
-                                + "</white> pending faction invite(s)! "
-                                + "<click:run_command:/fac invites><gold>[View Invites]</gold></click></yellow>");
-                player.sendMessage(msg);
+                player.sendMessage(lang.get("faction-invites-notify", player,
+                        Map.of("count", String.valueOf(invites.size()))));
             }
         }, 40L); // 2 seconds after join
     }

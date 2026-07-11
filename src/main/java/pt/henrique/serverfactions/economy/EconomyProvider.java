@@ -17,6 +17,14 @@ public interface EconomyProvider {
     CompletableFuture<Boolean> withdraw(UUID player, double amount);
 
     /**
+     * Deposit an amount into a player's account (e.g. refund a creation cost
+     * when the faction could no longer be created after the withdraw).
+     *
+     * @return true if the deposit succeeded
+     */
+    CompletableFuture<Boolean> deposit(UUID player, double amount);
+
+    /**
      * Get a player's balance.
      */
     CompletableFuture<Double> getBalance(UUID player);

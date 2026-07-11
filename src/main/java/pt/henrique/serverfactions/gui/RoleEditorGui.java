@@ -59,7 +59,14 @@ public final class RoleEditorGui {
             String prompt = lang.getRaw("sign-role-name", p);
             SignInputUtil.requestInput(plugin, p, prompt, newName -> {
                 if (!newName.isEmpty()) {
-                    state.name = newName;
+                    // Validate here too so an invalid name never reaches the GUI
+                    // title/items (they render the name through MiniMessage);
+                    // editRole re-validates on save as the authoritative gate.
+                    if (newName.matches("[a-zA-Z0-9 _-]{1,32}")) {
+                        state.name = newName;
+                    } else {
+                        p.sendMessage(lang.get("faction-name-invalid", p));
+                    }
                 }
                 open(p, roleId, state);
             });
@@ -103,9 +110,12 @@ public final class RoleEditorGui {
                         "<dark_gray>Delete Role?",
                         "<red>Delete role <white>" + state.name + "</white>?",
                         () -> {
-                            fm.deleteRole(p.getUniqueId(), roleId);
-                            p.sendMessage(lang.get("faction-role-deleted", p,
-                                    Map.of("role", state.name)));
+                            // deleteRole re-checks permission and that no member still
+                            // holds the role; it messages the player when it refuses.
+                            if (fm.deleteRole(p.getUniqueId(), roleId)) {
+                                p.sendMessage(lang.get("faction-role-deleted", p,
+                                        Map.of("role", state.name)));
+                            }
                             RolesGui.open(p);
                         });
             });
@@ -134,8 +144,11 @@ public final class RoleEditorGui {
         // Save
         gui.setItem(gc.getSlot(GUI, "save"), create(Material.LIME_WOOL,
                 "<green>Save"), p -> {
-            fm.editRole(p.getUniqueId(), roleId, state.name, state.priority, state.toPermMap());
-            p.sendMessage(lang.get("faction-settings-saved", p));
+            // editRole validates and messages the player on refusal; only claim
+            // success when the role was actually saved.
+            if (fm.editRole(p.getUniqueId(), roleId, state.name, state.priority, state.toPermMap())) {
+                p.sendMessage(lang.get("faction-settings-saved", p));
+            }
             RolesGui.open(p);
         });
 

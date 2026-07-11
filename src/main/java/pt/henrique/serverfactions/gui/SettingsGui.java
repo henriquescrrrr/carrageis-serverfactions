@@ -35,6 +35,15 @@ public final class SettingsGui {
         String factionId = faction.getFactionId();
         boolean isLeader = faction.getLeaderUuid().equals(player.getUniqueId());
 
+        // Server-side gate (mirrors the MainMenu button gating): a player whose
+        // permission was revoked while a stale GUI was open must not re-enter.
+        FactionRole viewerRole = fm.getPlayerRole(player.getUniqueId());
+        boolean canEdit = isLeader || (viewerRole != null && viewerRole.isCanEditSettings());
+        if (!canEdit) {
+            player.sendMessage(lang.get("faction-no-permission-settings", player));
+            return;
+        }
+
         GuiHolder gui = new GuiHolder(gc.getSize(GUI), mm(lang.getRaw("gui-settings", player)));
         gui.fill();
 

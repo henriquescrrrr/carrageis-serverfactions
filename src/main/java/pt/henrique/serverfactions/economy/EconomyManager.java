@@ -23,6 +23,15 @@ public class EconomyManager {
         setupProvider();
     }
 
+    /**
+     * Re-select the provider after a config reload (the economy section is
+     * documented as reloadable via /fac admin reload).
+     */
+    public void reload() {
+        activeProvider = null;
+        setupProvider();
+    }
+
     private void setupProvider() {
         List<String> priority = configManager.getEconomyPriority();
 
@@ -49,6 +58,15 @@ public class EconomyManager {
     public CompletableFuture<Boolean> withdraw(UUID player, double amount) {
         if (activeProvider == null || amount <= 0) return CompletableFuture.completedFuture(true);
         return activeProvider.withdraw(player, amount);
+    }
+
+    /**
+     * Deposit an amount into a player's account (used to refund a withdrawn cost).
+     * Returns true if no economy is set up or amount <= 0.
+     */
+    public CompletableFuture<Boolean> deposit(UUID player, double amount) {
+        if (activeProvider == null || amount <= 0) return CompletableFuture.completedFuture(true);
+        return activeProvider.deposit(player, amount);
     }
 
     /**

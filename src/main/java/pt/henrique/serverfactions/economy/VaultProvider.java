@@ -47,6 +47,16 @@ public class VaultProvider implements EconomyProvider {
     }
 
     @Override
+    public CompletableFuture<Boolean> deposit(UUID playerUuid, double amount) {
+        if (!available) return CompletableFuture.completedFuture(false);
+        return CompletableFuture.supplyAsync(() -> {
+            OfflinePlayer player = Bukkit.getOfflinePlayer(playerUuid);
+            EconomyResponse response = economy.depositPlayer(player, amount);
+            return response.transactionSuccess();
+        });
+    }
+
+    @Override
     public CompletableFuture<Double> getBalance(UUID playerUuid) {
         if (!available) return CompletableFuture.completedFuture(0.0);
         return CompletableFuture.supplyAsync(() -> {

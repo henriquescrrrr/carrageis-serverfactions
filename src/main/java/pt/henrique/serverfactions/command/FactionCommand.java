@@ -15,10 +15,12 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -34,6 +36,10 @@ public final class FactionCommand {
         plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(
                     Commands.literal("fac")
+                            // Visibility gate: hide /fac from players without the base
+                            // permission (admins keep access through the admin node too).
+                            .requires(src -> src.getSender().hasPermission("serverfactions.use")
+                                    || src.getSender().hasPermission("serverfactions.admin"))
                             .executes(FactionCommand::handleBase)
                             // /fac create
                             .then(Commands.literal("create")
@@ -112,6 +118,11 @@ public final class FactionCommand {
                         Map.of("min", String.valueOf(min), "max", String.valueOf(max))));
                 return;
             }
+            if (!name.matches("[a-zA-Z0-9 _-]+")) {
+                // Early feedback; createFaction re-validates as the authoritative gate.
+                player.sendMessage(lang.get("faction-name-invalid", player));
+                return;
+            }
             if (fm.isNameTaken(name)) {
                 player.sendMessage(lang.get("faction-name-taken", player));
                 return;
@@ -124,6 +135,10 @@ public final class FactionCommand {
                 if (tag.length() > plugin.getConfigManager().getMaxTagLength()) {
                     player.sendMessage(lang.get("faction-tag-too-long", player,
                             Map.of("max", String.valueOf(plugin.getConfigManager().getMaxTagLength()))));
+                    return;
+                }
+                if (!tag.matches("[a-zA-Z0-9_-]+")) {
+                    player.sendMessage(lang.get("faction-name-invalid", player));
                     return;
                 }
                 if (fm.isTagTaken(tag)) {
@@ -154,7 +169,7 @@ public final class FactionCommand {
         String targetName = StringArgumentType.getString(ctx, "player");
         Player target = Bukkit.getPlayerExact(targetName);
         if (target == null) {
-            player.sendMessage(lang.get("faction-target-in-faction", player,
+            player.sendMessage(lang.get("faction-player-not-found", player,
                     Map.of("player", targetName)));
             return 0;
         }
@@ -211,7 +226,7 @@ public final class FactionCommand {
         String factionId = fm.getFactionIdByName(factionName);
         if (factionId == null) {
             player.sendMessage(ServerFactions.getInstance().getLangManager()
-                    .get("faction-name-taken", player)); // reuse: "not found" would be better
+                    .get("faction-not-found", player, Map.of("faction", factionName)));
             return 0;
         }
         FactionInfoGui.open(player, factionId);
@@ -256,8 +271,8 @@ public final class FactionCommand {
     }
 
     private static int handleAdminDisband(CommandContext<CommandSourceStack> ctx) {
-        if (!requirePlayer(ctx)) return 0;
-        Player player = (Player) ctx.getSource().getSender();
+        // Admin commands work from the console as well as in-game.
+        CommandSender sender = ctx.getSource().getSender();
 
         String factionName = StringArgumentType.getString(ctx, "faction");
         FactionManager fm = ServerFactions.getInstance().getFactionManager();
@@ -265,23 +280,26 @@ public final class FactionCommand {
 
         String factionId = fm.getFactionIdByName(factionName);
         if (factionId == null) {
-            player.sendMessage(lang.get("faction-name-taken", player));
+            sender.sendMessage(msg(lang, sender, "faction-not-found", Map.of("faction", factionName)));
             return 0;
         }
 
-        fm.dissolveFaction(factionId, player.getUniqueId());
-        player.sendMessage(lang.get("admin-disband", player, Map.of("faction", factionName)));
+        // null = console/system actor (always authorized by dissolveFaction)
+        UUID dissolvedBy = sender instanceof Player p ? p.getUniqueId() : null;
+        fm.dissolveFaction(factionId, dissolvedBy);
+        sender.sendMessage(msg(lang, sender, "admin-disband", Map.of("faction", factionName)));
         return Command.SINGLE_SUCCESS;
     }
 
     private static int handleAdminReload(CommandContext<CommandSourceStack> ctx) {
-        if (!requirePlayer(ctx)) return 0;
-        Player player = (Player) ctx.getSource().getSender();
+        CommandSender sender = ctx.getSource().getSender();
 
         ServerFactions plugin = ServerFactions.getInstance();
         plugin.getConfigManager().reload();
+        plugin.getGuiConfig().reload();
         plugin.getLangManager().reload();
-        player.sendMessage(plugin.getLangManager().get("admin-reload", player));
+        plugin.getEconomyManager().reload();
+        sender.sendMessage(msg(plugin.getLangManager(), sender, "admin-reload", null));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -315,15 +333,29 @@ public final class FactionCommand {
     // ======================== UTIL ========================
 
     private static boolean requirePlayer(CommandContext<CommandSourceStack> ctx) {
-        return ctx.getSource().getSender() instanceof Player;
+        CommandSender sender = ctx.getSource().getSender();
+        if (sender instanceof Player) return true;
+        // Give the console feedback instead of failing silently.
+        sender.sendMessage(ServerFactions.getInstance().getLangManager().get("command-players-only"));
+        return false;
     }
 
     private static boolean checkPerm(Player player, String permission) {
         if (!player.hasPermission(permission)) {
-            player.sendMessage(net.kyori.adventure.text.Component.text("§cNo permission."));
+            player.sendMessage(ServerFactions.getInstance().getLangManager()
+                    .get("command-no-permission", player));
             return false;
         }
         return true;
+    }
+
+    /** Localized message for a player sender; default locale for the console. */
+    private static net.kyori.adventure.text.Component msg(
+            LangManager lang, CommandSender sender, String key, Map<String, String> placeholders) {
+        if (sender instanceof Player p) {
+            return placeholders == null ? lang.get(key, p) : lang.get(key, p, placeholders);
+        }
+        return placeholders == null ? lang.get(key) : lang.get(key, placeholders);
     }
 }
 
