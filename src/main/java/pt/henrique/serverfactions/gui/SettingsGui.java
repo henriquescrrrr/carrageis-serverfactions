@@ -5,7 +5,6 @@ import pt.henrique.serverfactions.config.GuiConfig;
 import pt.henrique.serverfactions.config.LangManager;
 import pt.henrique.serverfactions.manager.FactionManager;
 import pt.henrique.serverfactions.model.Faction;
-import pt.henrique.serverfactions.model.FactionRole;
 import pt.henrique.serverfactions.util.SignInputUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -37,9 +36,8 @@ public final class SettingsGui {
 
         // Server-side gate (mirrors the MainMenu button gating): a player whose
         // permission was revoked while a stale GUI was open must not re-enter.
-        FactionRole viewerRole = fm.getPlayerRole(player.getUniqueId());
-        boolean canEdit = isLeader || (viewerRole != null && viewerRole.isCanEditSettings());
-        if (!canEdit) {
+        // Same predicate the setters enforce, so the menu and the writes cannot drift.
+        if (!fm.canEditSettings(player.getUniqueId())) {
             player.sendMessage(lang.get("faction-no-permission-settings", player));
             return;
         }
@@ -57,24 +55,17 @@ public final class SettingsGui {
                 if (newName.isEmpty()) { SettingsGui.open(p); return; }
                 int min = plugin.getConfigManager().getMinNameLength();
                 int max = plugin.getConfigManager().getMaxNameLength();
+                // Early feedback with the exact reason; setName re-validates and is
+                // the authoritative gate.
                 if (newName.length() < min || newName.length() > max) {
                     p.sendMessage(lang.get("faction-name-too-long", p,
                             Map.of("min", String.valueOf(min), "max", String.valueOf(max))));
                     SettingsGui.open(p);
                     return;
                 }
-                if (!newName.matches("[a-zA-Z0-9 _-]+")) {
-                    p.sendMessage(lang.get("faction-name-invalid", p));
-                    SettingsGui.open(p);
-                    return;
+                if (fm.setName(p.getUniqueId(), factionId, newName)) {
+                    p.sendMessage(lang.get("faction-name-changed", p, Map.of("name", newName)));
                 }
-                if (fm.isNameTaken(newName) && !newName.equalsIgnoreCase(faction.getName())) {
-                    p.sendMessage(lang.get("faction-name-taken", p));
-                    SettingsGui.open(p);
-                    return;
-                }
-                fm.setName(factionId, newName);
-                p.sendMessage(lang.get("faction-name-changed", p, Map.of("name", newName)));
                 SettingsGui.open(p);
             });
         });
@@ -89,26 +80,17 @@ public final class SettingsGui {
             SignInputUtil.requestInput(plugin, p, prompt, newTag -> {
                 if (newTag.isEmpty()) { SettingsGui.open(p); return; }
                 int maxTag = plugin.getConfigManager().getMaxTagLength();
+                // Early feedback with the exact reason; setTag re-validates the
+                // charset (MiniMessage injection) and uniqueness authoritatively.
                 if (newTag.length() > maxTag) {
                     p.sendMessage(lang.get("faction-tag-too-long", p,
                             Map.of("max", String.valueOf(maxTag))));
                     SettingsGui.open(p);
                     return;
                 }
-                if (!newTag.matches("[a-zA-Z0-9_-]+")) {
-                    // Prevent MiniMessage/formatting injection via the tag (it is
-                    // rendered unescaped in the formatted tag and placeholders).
-                    p.sendMessage(lang.get("faction-name-invalid", p));
-                    SettingsGui.open(p);
-                    return;
+                if (fm.setTag(p.getUniqueId(), factionId, newTag)) {
+                    p.sendMessage(lang.get("faction-tag-changed", p, Map.of("tag", newTag)));
                 }
-                if (fm.isTagTaken(newTag) && !newTag.equalsIgnoreCase(faction.getTag())) {
-                    p.sendMessage(lang.get("faction-tag-taken", p));
-                    SettingsGui.open(p);
-                    return;
-                }
-                fm.setTag(factionId, newTag);
-                p.sendMessage(lang.get("faction-tag-changed", p, Map.of("tag", newTag)));
                 SettingsGui.open(p);
             });
         });
@@ -133,8 +115,9 @@ public final class SettingsGui {
                 isPublic
                         ? lang.getRaw("gui-btn-visibility-public", player)
                         : lang.getRaw("gui-btn-visibility-private", player)), p -> {
-            fm.setPublic(factionId, !isPublic);
-            p.sendMessage(lang.get(!isPublic ? "faction-visibility-public" : "faction-visibility-private", p));
+            if (fm.setPublic(p.getUniqueId(), factionId, !isPublic)) {
+                p.sendMessage(lang.get(!isPublic ? "faction-visibility-public" : "faction-visibility-private", p));
+            }
             SettingsGui.open(p); // refresh
         });
 
@@ -149,16 +132,18 @@ public final class SettingsGui {
             if (!limitEnabled) {
                 // Enable limit
                 if (faction.getMemberLimit() <= 0) {
-                    fm.setMemberLimit(factionId, 10);
+                    fm.setMemberLimit(p.getUniqueId(), factionId, 10);
                 }
-                fm.setMemberLimitEnabled(factionId, true);
-                p.sendMessage(lang.get("faction-member-limit-enabled", p,
-                        Map.of("limit", String.valueOf(Math.max(faction.getMemberLimit(), 10)))));
+                if (fm.setMemberLimitEnabled(p.getUniqueId(), factionId, true)) {
+                    p.sendMessage(lang.get("faction-member-limit-enabled", p,
+                            Map.of("limit", String.valueOf(Math.max(faction.getMemberLimit(), 10)))));
+                }
                 SettingsGui.open(p);
             } else if (click.isRightClick()) {
                 // Disable limit
-                fm.setMemberLimitEnabled(factionId, false);
-                p.sendMessage(lang.get("faction-member-limit-disabled", p));
+                if (fm.setMemberLimitEnabled(p.getUniqueId(), factionId, false)) {
+                    p.sendMessage(lang.get("faction-member-limit-disabled", p));
+                }
                 SettingsGui.open(p);
             } else {
                 // Left-click → open member limit adjustment

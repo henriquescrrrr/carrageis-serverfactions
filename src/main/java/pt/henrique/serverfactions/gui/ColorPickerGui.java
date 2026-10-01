@@ -56,6 +56,13 @@ public final class ColorPickerGui {
         Faction faction = fm.getFactionByPlayer(player.getUniqueId());
         if (faction == null) return;
 
+        // Reachable only from SettingsGui today, but re-gate here so the menu can
+        // never be re-entered by a player whose permission was revoked meanwhile.
+        if (!fm.canEditSettings(player.getUniqueId())) {
+            player.sendMessage(lang.get("faction-no-permission-settings", player));
+            return;
+        }
+
         String factionId = faction.getFactionId();
         String title = lang.getRaw("gui-color-picker", player);
         GuiHolder gui = new GuiHolder(gc.getSize(GUI), mm(title));
@@ -102,11 +109,11 @@ public final class ColorPickerGui {
 
     private static void applyColor(Player player, FactionManager fm, String factionId,
                                     boolean isPrimary, String colorTag) {
-        if (isPrimary) {
-            fm.setPrimaryColor(factionId, colorTag);
-        } else {
-            fm.setSecondaryColor(factionId, colorTag);
-        }
+        boolean applied = isPrimary
+                ? fm.setPrimaryColor(player.getUniqueId(), factionId, colorTag)
+                : fm.setSecondaryColor(player.getUniqueId(), factionId, colorTag);
+        if (!applied) return;
+
         player.sendMessage(ServerFactions.getInstance().getLangManager()
                 .get("faction-color-changed", player));
         String soundName = ServerFactions.getInstance().getConfigManager().getSound("settings-saved");

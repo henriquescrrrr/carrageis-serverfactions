@@ -35,6 +35,13 @@ public final class MemberLimitGui {
         Faction faction = fm.getFactionByPlayer(player.getUniqueId());
         if (faction == null) return;
 
+        // Reachable only from SettingsGui today, but re-gate here so the menu can
+        // never be re-entered by a player whose permission was revoked meanwhile.
+        if (!fm.canEditSettings(player.getUniqueId())) {
+            player.sendMessage(lang.get("faction-no-permission-settings", player));
+            return;
+        }
+
         String factionId = faction.getFactionId();
         int currentMembers = fm.getMemberCount(factionId);
         int absMax = config.getAbsoluteMaxMembers();
@@ -74,9 +81,10 @@ public final class MemberLimitGui {
         // Save
         gui.setItem(gc.getSlot(GUI, "save"), create(Material.LIME_WOOL,
                 "<green>Save"), p -> {
-            fm.setMemberLimit(factionId, displayLimit);
-            p.sendMessage(lang.get("faction-member-limit-changed", p,
-                    Map.of("limit", String.valueOf(displayLimit))));
+            if (fm.setMemberLimit(p.getUniqueId(), factionId, displayLimit)) {
+                p.sendMessage(lang.get("faction-member-limit-changed", p,
+                        Map.of("limit", String.valueOf(displayLimit))));
+            }
             SettingsGui.open(p);
         });
 

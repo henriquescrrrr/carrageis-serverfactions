@@ -455,6 +455,16 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
             return;
         }
 
+        // The target must be in the kicker's faction. Without this a stale members
+        // GUI (the target left and joined another faction while the menu was open)
+        // would still run the removal below, which deletes the target's membership
+        // row and their playerFaction entry — evicting them from a faction the
+        // kicker has no standing in, and leaving that faction's member map stale.
+        if (!factionId.equals(playerFaction.get(targetUuid))) {
+            if (kicker != null) kicker.sendMessage(lang.get("faction-no-permission-kick", kicker));
+            return;
+        }
+
         // Check permission
         FactionRole kickerRole = getPlayerRole(kickerUuid);
         if (kickerRole == null || (!kickerRole.isLeaderRole() && !kickerRole.isCanKick())) {
@@ -510,6 +520,14 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
         // Can't invite yourself
         if (inviterUuid.equals(targetUuid)) {
             if (inviter != null) inviter.sendMessage(lang.get("faction-invite-self", inviter));
+            return;
+        }
+
+        // The inviter must belong to the faction they are inviting into. The role
+        // check below reads the inviter's role in their OWN faction, so without
+        // this a member with canInvite could mint invites to any other faction.
+        if (!factionId.equals(playerFaction.get(inviterUuid))) {
+            if (inviter != null) inviter.sendMessage(lang.get("faction-no-permission-invite", inviter));
             return;
         }
 
@@ -946,60 +964,142 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
     //  SETTINGS
     // ================================================================
 
-    public void setName(String factionId, String newName) {
+    /**
+     * Authorization guard for every faction setting. Defence in depth on top of the
+     * GUI gating, which only ran when {@link pt.henrique.serverfactions.gui.SettingsGui}
+     * was <em>opened</em>: a player demoted, kicked or moved to another faction while
+     * their menu was still on screen could keep clicking its buttons, and every
+     * setter below wrote unconditionally.
+     *
+     * <p>The actor must be in the faction they are editing and either be its leader
+     * or hold {@code canEditSettings}.
+     */
+    private boolean canEditSettings(UUID actorUuid, String factionId) {
+        if (actorUuid == null || factionId == null) return false;
+        if (!factionId.equals(playerFaction.get(actorUuid))) return false;
+
         Faction faction = factionsById.get(factionId);
-        if (faction == null) return;
+        if (faction == null) return false;
+        if (faction.getLeaderUuid().equals(actorUuid)) return true;
+
+        FactionRole role = getPlayerRole(actorUuid);
+        return role != null && (role.isLeaderRole() || role.isCanEditSettings());
+    }
+
+    /** Server-side check the settings GUIs use before opening. */
+    public boolean canEditSettings(UUID actorUuid) {
+        return canEditSettings(actorUuid, playerFaction.get(actorUuid));
+    }
+
+    /**
+     * Common preamble for the setters: authorise the actor and return the faction,
+     * or null (with the actor messaged) when the action is refused.
+     */
+    private Faction authorizeSettings(UUID actorUuid, String factionId) {
+        if (!canEditSettings(actorUuid, factionId)) {
+            messagePlayer(actorUuid, "faction-no-permission-settings", null);
+            return null;
+        }
+        return factionsById.get(factionId);
+    }
+
+    /**
+     * Rename a faction. Charset, length and uniqueness are enforced here rather
+     * than only in the GUI, because the name is embedded unescaped in MiniMessage
+     * templates and because {@code factionsByName} is a unique index: writing a
+     * name another faction already holds would repoint that index at this faction.
+     *
+     * @return true if the rename was applied (the actor is messaged on refusal)
+     */
+    public boolean setName(UUID actorUuid, String factionId, String newName) {
+        Faction faction = authorizeSettings(actorUuid, factionId);
+        if (faction == null) return false;
+
+        if (newName == null || !isValidName(newName)
+                || newName.length() < config.getMinNameLength()
+                || newName.length() > config.getMaxNameLength()) {
+            messagePlayer(actorUuid, "faction-name-invalid", null);
+            return false;
+        }
+        if (isNameTaken(newName) && !newName.equalsIgnoreCase(faction.getName())) {
+            messagePlayer(actorUuid, "faction-name-taken", null);
+            return false;
+        }
+
         factionsByName.remove(faction.getName().toLowerCase());
         faction.setName(newName);
         factionsByName.put(newName.toLowerCase(), factionId);
         database.updateFaction(faction);
+        return true;
     }
 
-    public void setTag(String factionId, String newTag) {
-        Faction faction = factionsById.get(factionId);
-        if (faction == null) return;
+    /**
+     * Change a faction's tag. Same reasoning as {@link #setName}; the tag is also
+     * rendered unescaped through {@link #getFormattedTag} and PlaceholderAPI.
+     *
+     * @return true if the change was applied (the actor is messaged on refusal)
+     */
+    public boolean setTag(UUID actorUuid, String factionId, String newTag) {
+        Faction faction = authorizeSettings(actorUuid, factionId);
+        if (faction == null) return false;
+
+        if (newTag == null || !isValidTag(newTag) || newTag.length() > config.getMaxTagLength()) {
+            messagePlayer(actorUuid, "faction-name-invalid", null);
+            return false;
+        }
+        if (isTagTaken(newTag) && !newTag.equalsIgnoreCase(faction.getTag())) {
+            messagePlayer(actorUuid, "faction-tag-taken", null);
+            return false;
+        }
+
         factionsByTag.remove(faction.getTag().toLowerCase());
         faction.setTag(newTag);
         factionsByTag.put(newTag.toLowerCase(), factionId);
         invalidateFormattedTag(factionId);
         database.updateFaction(faction);
+        return true;
     }
 
-    public void setPrimaryColor(String factionId, String color) {
-        Faction faction = factionsById.get(factionId);
-        if (faction == null) return;
+    public boolean setPrimaryColor(UUID actorUuid, String factionId, String color) {
+        Faction faction = authorizeSettings(actorUuid, factionId);
+        if (faction == null || !isAllowedColorTag(color)) return false;
         faction.setPrimaryColor(color);
         invalidateFormattedTag(factionId);
         database.updateFaction(faction);
+        return true;
     }
 
-    public void setSecondaryColor(String factionId, String color) {
-        Faction faction = factionsById.get(factionId);
-        if (faction == null) return;
+    public boolean setSecondaryColor(UUID actorUuid, String factionId, String color) {
+        Faction faction = authorizeSettings(actorUuid, factionId);
+        if (faction == null || !isAllowedColorTag(color)) return false;
         faction.setSecondaryColor(color);
         invalidateFormattedTag(factionId);
         database.updateFaction(faction);
+        return true;
     }
 
-    public void setPublic(String factionId, boolean isPublic) {
-        Faction faction = factionsById.get(factionId);
-        if (faction == null) return;
+    public boolean setPublic(UUID actorUuid, String factionId, boolean isPublic) {
+        Faction faction = authorizeSettings(actorUuid, factionId);
+        if (faction == null) return false;
         faction.setPublic(isPublic);
         database.updateFaction(faction);
+        return true;
     }
 
-    public void setMemberLimit(String factionId, int limit) {
-        Faction faction = factionsById.get(factionId);
-        if (faction == null) return;
-        faction.setMemberLimit(Math.min(limit, config.getAbsoluteMaxMembers()));
+    public boolean setMemberLimit(UUID actorUuid, String factionId, int limit) {
+        Faction faction = authorizeSettings(actorUuid, factionId);
+        if (faction == null) return false;
+        faction.setMemberLimit(Math.max(1, Math.min(limit, config.getAbsoluteMaxMembers())));
         database.updateFaction(faction);
+        return true;
     }
 
-    public void setMemberLimitEnabled(String factionId, boolean enabled) {
-        Faction faction = factionsById.get(factionId);
-        if (faction == null) return;
+    public boolean setMemberLimitEnabled(UUID actorUuid, String factionId, boolean enabled) {
+        Faction faction = authorizeSettings(actorUuid, factionId);
+        if (faction == null) return false;
         faction.setMemberLimitEnabled(enabled);
         database.updateFaction(faction);
+        return true;
     }
 
     // ================================================================
@@ -1183,6 +1283,24 @@ public class FactionManager implements ServerFactionsProvider.FactionManagerBrid
 
     private boolean isValidTag(String tag) {
         return tag.matches("[a-zA-Z0-9_-]+");
+    }
+
+    /**
+     * The colour palette the picker offers, and the only values accepted for a
+     * faction's primary/secondary colour. Both are concatenated straight into
+     * {@link #getFormattedTag}, chat formats and the PlaceholderAPI output without
+     * escaping, so an arbitrary string here is a MiniMessage injection: a stored
+     * {@code <click:run_command:...>} would render for every player who sees the
+     * tag, not just the one who set it.
+     */
+    private static final Set<String> ALLOWED_COLOR_TAGS = Set.of(
+            "<black>", "<dark_blue>", "<dark_green>", "<dark_aqua>",
+            "<dark_red>", "<dark_purple>", "<gold>", "<gray>",
+            "<dark_gray>", "<blue>", "<green>", "<aqua>",
+            "<red>", "<light_purple>", "<yellow>", "<white>");
+
+    private boolean isAllowedColorTag(String tag) {
+        return tag != null && ALLOWED_COLOR_TAGS.contains(tag);
     }
 
     /**
